@@ -10,7 +10,7 @@ Hain’t is a small, open-source position capture service for ACU-RITE/HEIDENHAI
 
 Hain’t began life when my company was introduced to the pain of working with Heidenhain to receive their **HEIDENHAIN GAGE-CHEK Wedge** to serve a DRO300. Several weeks of back-and-forth resulted in a failing trial license and no transparent pricing for the software. German software has a way of overcomplicating the simple task of displaying and saving simple readout data.
 
-GAGE-CHEK Wedge was a poor fit for this installation: it is a Windows desktop product with a trial-license model, and its workflow focuses on transferring readings into Excel, the cursor, or a text field. Getting reliable data from the connected DRO300 proved far more difficult than it should have been. We needed a transparent tool that could run locally, expose an ordinary HTTP API, keep a durable audit trail, and later feed a separate engineering-validation stack.
+GAGE-CHEK Wedge was a poor fit for the business: it is a Windows desktop product with a trial-license model, and its workflow focuses on transferring readings into Excel, the cursor, or a text field. Getting reliable data from the connected DRO300 proved far more difficult than it should have been. We needed a transparent tool that could run locally, expose an ordinary HTTP API, keep a durable audit trail, and later feed a separate engineering-validation stack.
 
 Hain’t deliberately does less:
 
@@ -24,7 +24,7 @@ This project is independent of HEIDENHAIN and is not an official replacement or 
 
 ## Features
 
-Hain’t is complete for its intended job: reading a compatible DRO continuously, displaying its current coordinates, and saving selected positions with durable timestamps.
+Hain’t is limited, but feature complete: reading a compatible DRO continuously, displaying its current coordinates, and saving selected positions with durable timestamps.
 
 - Dockerized web application, JSON API, and SQLite database;
 - automatic container health checks and restart policy;
