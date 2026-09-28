@@ -4,9 +4,9 @@ services:
     environment:
       PORT: "8080"
       DATABASE_PATH: /data/dro.sqlite3
-      CORS_ORIGIN: "*"
+      CORS_ORIGIN: "${HAINT_CORS_ORIGIN:-*}"
     ports:
-      - "127.0.0.1:8080:8080"
+      - "${HAINT_BIND_ADDRESS:-127.0.0.1}:${HAINT_PORT:-8080}:8080"
     volumes:
       - dro-data:/data
     restart: unless-stopped
