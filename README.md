@@ -142,17 +142,19 @@ the browser interface, or `Q` to quit. It accepts `--serial-port`, `--http-port`
 These packages are optional evaluation builds; Docker Compose remains the recommended deployment.
 
 The [Native builds workflow](https://github.com/AngelaDMerkel/Hain-t/actions/workflows/native-builds.yml)
-produces four downloadable artifacts from this branch:
+produces four downloadable packages:
 
 - a macOS `.app` for Apple silicon;
 - a macOS `.app` for Intel Macs;
 - a 64-bit Windows `.exe`;
 - an `amd64` Debian `.deb` package.
 
-Run the workflow manually from the repository’s **Actions** page or push a version tag. The packages
-embed the web service, interface, pySerial bridge, and desktop launcher; Docker and a separate Python
-installation are not required. They are currently unsigned experimental builds, so macOS Gatekeeper
-or Windows SmartScreen may require explicit approval before first launch.
+Pushes to `main` and manual workflow runs retain the packages as temporary Actions artifacts. Pushing
+a semantic version tag such as `v0.1.0` builds the same packages, generates SHA-256 checksums, and
+publishes them as a permanent GitHub Release with generated release notes. The packages embed the web
+service, interface, pySerial bridge, and desktop launcher; Docker and a separate Python installation
+are not required. They are currently unsigned experimental builds, so macOS Gatekeeper or Windows
+SmartScreen may require explicit approval before first launch.
 
 Each archive also contains `haint-tui` (`haint-tui.exe` on Windows). The Debian package installs both
 `haint` and `haint-tui` in `/usr/bin`.

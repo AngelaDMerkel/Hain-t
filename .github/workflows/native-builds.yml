@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
+      - main
       - experimental/native-packaging
     tags:
       - "v*"
@@ -109,3 +110,36 @@ jobs:
         with:
           name: Haint-Debian-amd64
           path: dist/*.deb
+
+  release:
+    name: Publish GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs:
+      - macos
+      - windows
+      - debian
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download native packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: Haint-*
+          path: release-assets
+          merge-multiple: true
+      - name: Generate checksums
+        working-directory: release-assets
+        run: sha256sum * > SHA256SUMS
+      - name: Create or update release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" release-assets/* --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" release-assets/* \
+              --verify-tag \
+              --generate-notes \
+              --title "Hain’t $GITHUB_REF_NAME"
+          fi
