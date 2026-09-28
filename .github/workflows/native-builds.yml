@@ -1,0 +1,98 @@
+name: Native builds
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - experimental/native-packaging
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    name: macOS (${{ matrix.architecture }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            architecture: arm64
+          - runner: macos-15-intel
+            architecture: x86_64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install build dependencies
+        run: python -m pip install -r requirements-build.txt
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Build application bundle
+        run: bash packaging/build_macos.sh
+      - name: Smoke test packaged executable
+        run: DATABASE_PATH="$RUNNER_TEMP/haint-check.sqlite3" dist/Haint.app/Contents/MacOS/Haint --check
+      - name: Create archive
+        run: ditto -c -k --sequesterRsrc --keepParent dist/Haint.app "Haint-macOS-${{ matrix.architecture }}.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Haint-macOS-${{ matrix.architecture }}
+          path: Haint-macOS-${{ matrix.architecture }}.zip
+
+  windows:
+    name: Windows (x86_64)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install build dependencies
+        run: python -m pip install -r requirements-build.txt
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Build executable
+        shell: pwsh
+        run: ./packaging/build_windows.ps1
+      - name: Smoke test packaged executable
+        shell: pwsh
+        run: |
+          $env:DATABASE_PATH = "$env:RUNNER_TEMP\haint-check.sqlite3"
+          & .\dist\Haint.exe --check
+      - name: Create archive
+        shell: pwsh
+        run: Compress-Archive -Path .\dist\Haint.exe, .\LICENSE, .\THIRD_PARTY_NOTICES.md -DestinationPath .\Haint-Windows-x86_64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Haint-Windows-x86_64
+          path: Haint-Windows-x86_64.zip
+
+  debian:
+    name: Debian package (amd64)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install --yes python3-tk python3-venv
+      - name: Create build environment
+        run: |
+          python3 -m venv .build-venv
+          echo "$GITHUB_WORKSPACE/.build-venv/bin" >> "$GITHUB_PATH"
+      - name: Install build dependencies
+        run: .build-venv/bin/python -m pip install -r requirements-build.txt
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Build Debian package
+        run: bash packaging/build_deb.sh
+      - name: Smoke test packaged executable
+        run: DATABASE_PATH="$RUNNER_TEMP/haint-check.sqlite3" dist/haint --check
+      - name: Inspect package metadata
+        run: dpkg-deb --info dist/*.deb
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Haint-Debian-amd64
+          path: dist/*.deb

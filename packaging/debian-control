@@ -1,0 +1,10 @@
+Package: haint
+Version: @VERSION@
+Section: utils
+Priority: optional
+Architecture: @ARCHITECTURE@
+Maintainer: Hain’t contributors
+Depends: libc6 (>= 2.35), libx11-6, xdg-utils
+Description: Position capture for ACU-RITE and HEIDENHAIN DROs
+ Hain’t polls a compatible DRO over USB serial, displays live X/Y
+ coordinates, and stores operator-selected positions in SQLite.

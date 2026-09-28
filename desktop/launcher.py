@@ -59,6 +59,11 @@ def bridge_arguments(serial_port: str, http_port: int) -> argparse.Namespace:
 
 def package_check(http_port: int) -> int:
     data_directory = configure_environment(http_port)
+    try:
+        import tkinter  # noqa: F401
+    except ImportError as exc:
+        print(f"Tkinter is unavailable in this package: {exc}", file=sys.stderr)
+        return 1
     from app import server
 
     required = (

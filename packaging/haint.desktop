@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Hain't
+Comment=Live position capture for HEIDENHAIN DROs
+Exec=haint
+Icon=haint
+Terminal=false
+Type=Application
+Categories=Utility;Engineering;
