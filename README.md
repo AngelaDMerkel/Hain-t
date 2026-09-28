@@ -67,6 +67,10 @@ Windows, and Linux.
 
 ## Recommended installation
 
+**Docker Compose remains the recommended installation path.** It provides the most predictable
+runtime, persistence, health checks, and upgrade path. The native GUI and TUI packages below are
+experimental alternatives for environments where Docker is unavailable or undesirable.
+
 Clone the repository, start the container, and run the USB bridge on the host:
 
 ```bash
@@ -134,6 +138,8 @@ the browser interface, or `Q` to quit. It accepts `--serial-port`, `--http-port`
 `--poll-interval`, and `--poll-command`; set `NO_COLOR=1` or pass `--no-color` for plain output.
 
 ## Experimental native packages
+
+These packages are optional evaluation builds; Docker Compose remains the recommended deployment.
 
 The [Native builds workflow](https://github.com/AngelaDMerkel/Hain-t/actions/workflows/native-builds.yml)
 produces four downloadable artifacts from this branch:
