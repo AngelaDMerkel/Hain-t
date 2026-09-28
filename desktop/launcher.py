@@ -65,10 +65,14 @@ def package_check(http_port: int) -> int:
         print(f"Tkinter is unavailable in this package: {exc}", file=sys.stderr)
         return 1
     from app import server
+    from bridge import dro_bridge
+
+    dro_bridge.available_ports()
 
     required = (
         server.STATIC_ROOT / "index.html",
         server.STATIC_ROOT / "haint-lockup.png",
+        server.STATIC_ROOT / "haint-lockup.gif",
         server.STATIC_ROOT / "haint-mark.png",
     )
     missing = [str(path) for path in required if not path.is_file()]
@@ -104,7 +108,7 @@ class DesktopApplication:
         frame = ttk.Frame(self.root, padding=32)
         frame.pack(fill="both", expand=True)
 
-        self.logo = tk.PhotoImage(file=server.STATIC_ROOT / "haint-lockup.png").subsample(8)
+        self.logo = tk.PhotoImage(file=server.STATIC_ROOT / "haint-lockup.gif").subsample(2)
         ttk.Label(frame, image=self.logo).pack(anchor="w")
 
         self.status = tk.StringVar(value="Starting local service…")
