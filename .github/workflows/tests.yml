@@ -23,4 +23,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build container image
-        run: docker build --tag heidy-ho:test .
+        run: docker build --tag haint:test .

@@ -1,6 +1,6 @@
 # Security
 
-Heidy-Ho is currently intended for a trusted workstation or controlled shop network.
+Hain’t is currently intended for a trusted workstation or controlled shop network.
 
 - The API has no authentication or authorization.
 - The default Compose configuration binds port 8080 to `127.0.0.1` only.

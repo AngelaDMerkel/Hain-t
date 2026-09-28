@@ -1,6 +1,6 @@
 # Contributing
 
-Contributions that make Heidy-Ho easier to operate, diagnose, or port are welcome.
+Contributions that make Hain’t easier to operate, diagnose, or port are welcome.
 
 ## Before opening a change
 
@@ -12,8 +12,8 @@ Contributions that make Heidy-Ho easier to operate, diagnose, or port are welcom
 ## Development workflow
 
 ```bash
-git clone <your-fork-url> Heidy-Ho
-cd Heidy-Ho
+git clone <your-fork-url> haint
+cd haint
 python3 -m unittest discover -s tests -v
 docker compose up --build -d
 ```

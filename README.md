@@ -1,16 +1,18 @@
-# Heidy-Ho
+# Hain’t
 
-Heidy-Ho is a small, open-source position capture service for ACU-RITE/HEIDENHAIN digital readouts. It polls a DRO over USB, shows nearly live X/Y coordinates in a browser, and saves operator-selected positions to a timestamped SQLite database.
+> **It Hain’t Working**
 
-![Heidy-Ho showing a live X/Y position and saved measurements](docs/heidy-ho.jpg)
+Hain’t is a small, open-source position capture service for ACU-RITE/HEIDENHAIN digital readouts. It polls a DRO over USB, shows nearly live X/Y coordinates in a browser, and saves operator-selected positions to a timestamped SQLite database.
+
+![Hain’t showing a live X/Y position and saved measurements](docs/haint.jpg)
 
 ## Why this exists
 
-Heidy-Ho began as a practical replacement for **HEIDENHAIN GAGE-CHEK Wedge** in a DRO300 workflow.
+Hain’t began as a practical replacement for **HEIDENHAIN GAGE-CHEK Wedge** in a DRO300 workflow. The name—and the slogan, “It Hain’t Working”—is a restrained nod to the experience of persuading antiquated, opaque tooling to perform a straightforward data-transfer job.
 
 GAGE-CHEK Wedge was a poor fit for this installation: it is a Windows desktop product with a trial-license model, and its workflow focuses on transferring readings into Excel, the cursor, or a text field. Getting reliable data from the connected DRO300 proved far more difficult than it should have been. We needed a transparent tool that could run locally, expose an ordinary HTTP API, keep a durable audit trail, and later feed a separate engineering-validation stack.
 
-Heidy-Ho deliberately does less:
+Hain’t deliberately does less:
 
 - polls the DRO instead of waiting for an operator to press **Send Position**;
 - presents the current coordinates in a browser;
@@ -65,8 +67,8 @@ No `pip install` step is required. Both Python components use only the standard 
 Clone the repository and enter it:
 
 ```bash
-git clone <repository-url> Heidy-Ho
-cd Heidy-Ho
+git clone <repository-url> haint
+cd haint
 ```
 
 Connect the powered DRO to the Mac. Confirm that macOS created a serial device:
@@ -89,7 +91,7 @@ make bridge
 
 Open [http://localhost:8080](http://localhost:8080). The status should change to **Live**, and moving an axis should update the displayed coordinates within roughly half a second.
 
-Use **Save position** to persist the displayed X/Y pair. Live polling itself does not write to SQLite, so leaving Heidy-Ho open does not create an unbounded stream of database rows.
+Use **Save position** to persist the displayed X/Y pair. Live polling itself does not write to SQLite, so leaving Hain’t open does not create an unbounded stream of database rows.
 
 Stop the service with:
 
@@ -246,7 +248,7 @@ ls /dev/cu.usbmodem*
 
 The tested DRO appeared as `HEIDENHAIN DRO` and `/dev/cu.usbmodem12101`.
 
-### Heidy-Ho says “Waiting for DRO”
+### Hain’t says “Waiting for DRO”
 
 - confirm the bridge terminal is still running;
 - make sure another program does not own the serial port;
