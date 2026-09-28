@@ -113,6 +113,11 @@ def report_status(callback: object | None, message: str) -> None:
         callback(message)
 
 
+def output(args: argparse.Namespace, message: str, *, error: bool = False) -> None:
+    if not getattr(args, "quiet", False):
+        print(message, file=sys.stderr if error else sys.stdout, flush=True)
+
+
 def stream(
     args: argparse.Namespace,
     stop_event: threading.Event | None = None,
@@ -127,7 +132,7 @@ def stream(
             buffer = b""
             mode = f"polling every {args.poll_interval:g}s" if args.poll_interval > 0 else "manual send mode"
             message = f"Connected to {port} at {args.baud} baud; {mode}"
-            print(message, flush=True)
+            output(args, message)
             report_status(status_callback, message)
             next_poll = time.monotonic()
             while should_run(stop_event):
@@ -146,21 +151,21 @@ def stream(
                     line = raw_line.rstrip(b"\r").decode("ascii", errors="replace")
                     measurement = parse_dro_line(line, args.unit)
                     if measurement is None:
-                        print(f"Ignored unrecognized line: {line!r}", file=sys.stderr, flush=True)
+                        output(args, f"Ignored unrecognized line: {line!r}", error=True)
                         continue
                     try:
-                        result = post_json(args.endpoint, measurement)
+                        post_json(args.endpoint, measurement)
                         if args.verbose:
-                            print(
+                            output(
+                                args,
                                 f"{measurement['axis']}={measurement['value']} {measurement['unit']} "
                                 f"-> live update accepted",
-                                flush=True,
                             )
                     except Exception as exc:
-                        print(f"Could not forward measurement: {exc}", file=sys.stderr, flush=True)
+                        output(args, f"Could not forward measurement: {exc}", error=True)
         except Exception as exc:
             message = f"Serial bridge error: {exc}; retrying in {args.retry_seconds:g}s"
-            print(message, file=sys.stderr, flush=True)
+            output(args, message, error=True)
             report_status(status_callback, message)
             if stop_event is not None:
                 stop_event.wait(args.retry_seconds)
@@ -191,6 +196,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--retry-seconds", type=float, default=2.0)
     parser.add_argument("--verbose", action="store_true", help="Print every live axis update")
+    parser.add_argument("--quiet", action="store_true", help="Suppress bridge console output")
     return parser
 
 

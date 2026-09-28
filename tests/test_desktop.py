@@ -15,7 +15,7 @@ class ApplicationDataDirectoryTests(unittest.TestCase):
             )
 
     def test_uses_application_support_on_macos(self):
-        with patch("desktop.launcher.Path.home", return_value=Path("/Users/operator")):
+        with patch("desktop.common.Path.home", return_value=Path("/Users/operator")):
             self.assertEqual(
                 application_data_directory("Darwin"),
                 Path("/Users/operator/Library/Application Support/Haint"),
