@@ -15,10 +15,22 @@ python -m PyInstaller \
   --add-data "THIRD_PARTY_NOTICES.md:." \
   desktop/launcher.py
 
+python -m PyInstaller \
+  --clean \
+  --noconfirm \
+  --onefile \
+  --name haint-tui \
+  --paths . \
+  --add-data "app/static:app/static" \
+  --add-data "LICENSE:." \
+  --add-data "THIRD_PARTY_NOTICES.md:." \
+  desktop/tui.py
+
 package_root="$(mktemp -d)"
 trap 'rm -rf "${package_root}"' EXIT
 
 install -D -m 0755 dist/haint "${package_root}/usr/bin/haint"
+install -D -m 0755 dist/haint-tui "${package_root}/usr/bin/haint-tui"
 install -D -m 0644 packaging/haint.desktop \
   "${package_root}/usr/share/applications/haint.desktop"
 install -D -m 0644 app/static/haint-mark.png \

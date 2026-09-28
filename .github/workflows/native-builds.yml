@@ -36,8 +36,14 @@ jobs:
         run: bash packaging/build_macos.sh
       - name: Smoke test packaged executable
         run: DATABASE_PATH="$RUNNER_TEMP/haint-check.sqlite3" dist/Haint.app/Contents/MacOS/Haint --check
+      - name: Smoke test packaged TUI
+        run: DATABASE_PATH="$RUNNER_TEMP/haint-tui-check.sqlite3" dist/haint-tui --check
       - name: Create archive
-        run: ditto -c -k --sequesterRsrc --keepParent dist/Haint.app "Haint-macOS-${{ matrix.architecture }}.zip"
+        run: |
+          mkdir "Haint-macOS-${{ matrix.architecture }}"
+          cp -R dist/Haint.app "Haint-macOS-${{ matrix.architecture }}/"
+          cp dist/haint-tui LICENSE THIRD_PARTY_NOTICES.md "Haint-macOS-${{ matrix.architecture }}/"
+          ditto -c -k --sequesterRsrc --keepParent "Haint-macOS-${{ matrix.architecture }}" "Haint-macOS-${{ matrix.architecture }}.zip"
       - uses: actions/upload-artifact@v4
         with:
           name: Haint-macOS-${{ matrix.architecture }}
@@ -63,9 +69,14 @@ jobs:
         run: |
           $env:DATABASE_PATH = "$env:RUNNER_TEMP\haint-check.sqlite3"
           & .\dist\Haint.exe --check
+      - name: Smoke test packaged TUI
+        shell: pwsh
+        run: |
+          $env:DATABASE_PATH = "$env:RUNNER_TEMP\haint-tui-check.sqlite3"
+          & .\dist\haint-tui.exe --check
       - name: Create archive
         shell: pwsh
-        run: Compress-Archive -Path .\dist\Haint.exe, .\LICENSE, .\THIRD_PARTY_NOTICES.md -DestinationPath .\Haint-Windows-x86_64.zip
+        run: Compress-Archive -Path .\dist\Haint.exe, .\dist\haint-tui.exe, .\LICENSE, .\THIRD_PARTY_NOTICES.md -DestinationPath .\Haint-Windows-x86_64.zip
       - uses: actions/upload-artifact@v4
         with:
           name: Haint-Windows-x86_64
@@ -90,6 +101,8 @@ jobs:
         run: bash packaging/build_deb.sh
       - name: Smoke test packaged executable
         run: DATABASE_PATH="$RUNNER_TEMP/haint-check.sqlite3" dist/haint --check
+      - name: Smoke test packaged TUI
+        run: DATABASE_PATH="$RUNNER_TEMP/haint-tui-check.sqlite3" dist/haint-tui --check
       - name: Inspect package metadata
         run: dpkg-deb --info dist/*.deb
       - uses: actions/upload-artifact@v4
