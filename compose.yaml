@@ -1,0 +1,15 @@
+services:
+  dro-utility:
+    build: .
+    environment:
+      PORT: "8080"
+      DATABASE_PATH: /data/dro.sqlite3
+      CORS_ORIGIN: "*"
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - dro-data:/data
+    restart: unless-stopped
+
+volumes:
+  dro-data:

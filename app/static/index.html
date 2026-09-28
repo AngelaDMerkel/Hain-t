@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Heidy-Ho</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --field: #e8e9e6;
+      --ink: #29302f;
+      --secondary: #6f7875;
+      --quiet: #929996;
+      --accent: #607875;
+      --live: #718a78;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--field);
+      color: var(--ink);
+      font-family: "Avenir Next", Avenir, "Helvetica Neue", Arial, sans-serif;
+      font-size: 15px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    main {
+      width: min(1120px, calc(100% - 64px));
+      margin: 0 auto;
+      padding: 64px 0 88px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 32px;
+    }
+
+    .section-label,
+    th {
+      color: var(--secondary);
+      font-size: 11px;
+      font-weight: 650;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(27px, 4vw, 40px);
+      font-weight: 520;
+      letter-spacing: -.035em;
+      line-height: 1.1;
+    }
+
+    .connection {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--secondary);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #a18f75;
+    }
+
+    .dot.live { background: var(--live); }
+
+    .current {
+      padding: 68px 0 74px;
+    }
+
+    button {
+      display: block;
+      width: 100%;
+      margin-top: 38px;
+      appearance: none;
+      border: 0;
+      border-radius: 2px;
+      padding: 13px 16px 12px;
+      background: var(--accent);
+      color: #f4f5f2;
+      cursor: pointer;
+      font: 600 12px/1.2 "Avenir Next", Avenir, "Helvetica Neue", Arial, sans-serif;
+      letter-spacing: .035em;
+    }
+
+    button:hover:not(:disabled) { background: #506663; }
+    button:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+    button:disabled { cursor: default; opacity: .38; }
+
+    .coordinate-line {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      align-items: end;
+      gap: clamp(28px, 6vw, 88px);
+      margin-top: 18px;
+    }
+
+    .coordinate {
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      align-items: baseline;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .axis {
+      color: var(--accent);
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: .08em;
+    }
+
+    .reading {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: clamp(35px, 6.2vw, 68px);
+      font-variant-numeric: tabular-nums lining-nums;
+      font-weight: 420;
+      letter-spacing: -.06em;
+      line-height: .95;
+      white-space: nowrap;
+    }
+
+    .reading.missing { color: var(--quiet); }
+
+    .unit {
+      margin-left: 9px;
+      color: var(--secondary);
+      font-family: "Avenir Next", Avenir, sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: .04em;
+    }
+
+    .history { padding-top: 10px; }
+
+    .history-heading {
+      display: flex;
+      align-items: baseline;
+      margin-bottom: 16px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    th,
+    td {
+      padding: 10px 8px;
+      text-align: right;
+    }
+
+    th:first-child,
+    td:first-child {
+      width: 38%;
+      padding-left: 0;
+      text-align: left;
+    }
+
+    th:last-child,
+    td:last-child { padding-right: 0; }
+
+    td {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 14px;
+      font-variant-numeric: tabular-nums lining-nums;
+    }
+
+    td.position {
+      color: var(--ink);
+      font-size: 16px;
+    }
+
+    tbody tr + tr td { padding-top: 20px; }
+
+    .axis-inline {
+      margin-right: 8px;
+      color: var(--accent);
+      font-family: "Avenir Next", Avenir, sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+    }
+
+    .empty {
+      padding: 54px 0;
+      color: var(--secondary);
+      font-family: "Avenir Next", Avenir, sans-serif;
+      text-align: left !important;
+    }
+
+    @media (max-width: 760px) {
+      main { width: min(100% - 36px, 1120px); padding-top: 34px; }
+      header { display: block; }
+      .connection { margin-top: 18px; }
+      .coordinate-line { grid-template-columns: 1fr 1fr; gap: 28px 18px; }
+      .coordinate { grid-template-columns: 20px 1fr; gap: 8px; }
+      .reading { font-size: clamp(27px, 9vw, 46px); }
+      th:first-child, td:first-child { width: 44%; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Heidy-Ho</h1>
+    <div class="connection"><span id="dot" class="dot"></span><span id="connection">Connecting</span></div>
+  </header>
+
+  <section class="current" aria-labelledby="current-label">
+    <div id="current-label" class="section-label">Current position</div>
+    <div class="coordinate-line">
+      <div class="coordinate">
+        <span class="axis">X</span>
+        <span id="current-x" class="reading missing">—</span>
+      </div>
+      <div class="coordinate">
+        <span class="axis">Y</span>
+        <span id="current-y" class="reading missing">—</span>
+      </div>
+    </div>
+    <button id="save-position" type="button" disabled>Save position</button>
+  </section>
+
+  <section class="history" aria-labelledby="history-label">
+    <div class="history-heading">
+      <div id="history-label" class="section-label">Recent positions</div>
+    </div>
+    <table>
+      <thead>
+        <tr><th>Date (UTC)</th><th>X</th><th>Y</th></tr>
+      </thead>
+      <tbody id="rows"><tr><td class="empty" colspan="3">Press Send Position on the DRO to record a position.</td></tr></tbody>
+    </table>
+  </section>
+</main>
+
+<script>
+  const dot = document.querySelector('#dot');
+  const connection = document.querySelector('#connection');
+  const currentX = document.querySelector('#current-x');
+  const currentY = document.querySelector('#current-y');
+  const saveButton = document.querySelector('#save-position');
+  const rows = document.querySelector('#rows');
+  let saving = false;
+
+  const escapeHtml = (value) => String(value ?? '').replace(/[&<>'"]/g, character => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+  }[character]));
+
+  const clock = (stamp) => stamp
+    ? new Date(stamp).toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '')
+    : '—';
+
+  const formatValue = (measurement) => measurement
+    ? `${Number(measurement.value).toFixed(3)}<span class="unit">${escapeHtml(measurement.unit)}</span>`
+    : '—';
+
+  function groupTransmissions(measurements) {
+    const groups = [];
+    const chronological = [...measurements].reverse();
+
+    for (const measurement of chronological) {
+      const timestamp = Date.parse(measurement.received_at || measurement.stored_at);
+      let group = groups.at(-1);
+      const startsNewGroup = !group
+        || timestamp - group.lastTimestamp > 2000
+        || Boolean(group.axes[measurement.axis]);
+
+      if (startsNewGroup) {
+        group = {axes: {}, firstTimestamp: timestamp, lastTimestamp: timestamp, storedAt: measurement.stored_at};
+        groups.push(group);
+      }
+
+      group.axes[measurement.axis] = measurement;
+      group.lastTimestamp = timestamp;
+      group.storedAt = measurement.stored_at;
+    }
+
+    return groups.reverse();
+  }
+
+  function renderGroup(group) {
+    const x = group.axes.X;
+    const y = group.axes.Y;
+    return `<tr>
+      <td>${clock(group.storedAt)}</td>
+      <td class="position">${x ? `${Number(x.value).toFixed(3)} <span class="axis-inline">${escapeHtml(x.unit)}</span>` : '—'}</td>
+      <td class="position">${y ? `${Number(y.value).toFixed(3)} <span class="axis-inline">${escapeHtml(y.unit)}</span>` : '—'}</td>
+    </tr>`;
+  }
+
+  const isFresh = (stamp) => stamp && Date.now() - Date.parse(stamp) < 1500;
+
+  async function refreshLive() {
+    try {
+      const response = await fetch('/api/live', {cache: 'no-store'});
+      if (!response.ok) throw new Error('API unavailable');
+      const live = await response.json();
+      const current = live.axes || {};
+      const fresh = isFresh(live.updated_at);
+
+      currentX.innerHTML = formatValue(current.X);
+      currentY.innerHTML = formatValue(current.Y);
+      currentX.classList.toggle('missing', !current.X);
+      currentY.classList.toggle('missing', !current.Y);
+      saveButton.disabled = saving || !fresh || !current.X || !current.Y;
+
+      dot.classList.toggle('live', fresh);
+      connection.textContent = fresh ? 'Live' : 'Waiting for DRO';
+    } catch (error) {
+      dot.classList.remove('live');
+      connection.textContent = 'Service unavailable';
+      saveButton.disabled = true;
+    }
+  }
+
+  async function refreshHistory() {
+    const response = await fetch('/api/measurements?limit=200', {cache: 'no-store'});
+    if (!response.ok) throw new Error('History unavailable');
+    const list = await response.json();
+    const groups = groupTransmissions(list.measurements);
+    rows.innerHTML = groups.length
+      ? groups.map(renderGroup).join('')
+      : '<tr><td class="empty" colspan="3">No saved positions yet.</td></tr>';
+  }
+
+  saveButton.addEventListener('click', async () => {
+    if (saving) return;
+    saving = true;
+    saveButton.disabled = true;
+    saveButton.textContent = 'Saving';
+    try {
+      const response = await fetch('/api/positions', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: '{}'
+      });
+      if (!response.ok) throw new Error('Position could not be saved');
+      await refreshHistory();
+      saveButton.textContent = 'Saved';
+    } catch (error) {
+      saveButton.textContent = 'Try again';
+    } finally {
+      window.setTimeout(() => {
+        saving = false;
+        saveButton.textContent = 'Save position';
+        refreshLive();
+      }, 900);
+    }
+  });
+
+  refreshLive();
+  refreshHistory().catch(() => {
+    rows.innerHTML = '<tr><td class="empty" colspan="3">Saved positions unavailable.</td></tr>';
+  });
+  setInterval(refreshLive, 250);
+</script>
+</body>
+</html>
