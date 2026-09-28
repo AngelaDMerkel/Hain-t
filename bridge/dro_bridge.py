@@ -2,19 +2,18 @@
 from __future__ import annotations
 
 import argparse
-import glob
 import json
-import os
 import re
-import select
 import signal
 import sys
-import termios
+import threading
 import time
-import tty
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
+
+import serial
+from serial.tools import list_ports
 
 
 LINE_PATTERN = re.compile(
@@ -43,30 +42,45 @@ def parse_dro_line(line: str, default_unit: str = "mm") -> dict[str, object] | N
     }
 
 
-def find_port(requested: str) -> str:
+def available_ports() -> list[object]:
+    return sorted(list_ports.comports(), key=lambda port: port.device)
+
+
+def is_dro_port(port: object) -> bool:
+    details = " ".join(
+        str(getattr(port, attribute, "") or "")
+        for attribute in ("description", "manufacturer", "product", "hwid")
+    ).lower()
+    return "heidenhain" in details or "acu-rite" in details or "dro" in details
+
+
+def find_port(requested: str, ports: list[object] | None = None) -> str:
     if requested != "auto":
         return requested
-    matches = sorted(glob.glob("/dev/cu.usbmodem*"))
+    candidates = ports if ports is not None else available_ports()
+    preferred = [port for port in candidates if is_dro_port(port)]
+    matches = preferred or candidates
     if not matches:
-        raise FileNotFoundError("No /dev/cu.usbmodem* DRO serial port found")
+        raise FileNotFoundError("No serial ports found; connect the DRO or specify --port")
     if len(matches) > 1:
-        raise RuntimeError(f"Multiple USB modem ports found; specify one explicitly: {', '.join(matches)}")
-    return matches[0]
+        names = ", ".join(str(port.device) for port in matches)
+        raise RuntimeError(f"Multiple serial ports found; specify one explicitly: {names}")
+    return str(matches[0].device)
 
 
-def configure_port(fd: int, baud: int) -> None:
-    speed = getattr(termios, f"B{baud}", None)
-    if speed is None:
-        raise ValueError(f"Unsupported baud rate: {baud}")
-    tty.setraw(fd)
-    attrs = termios.tcgetattr(fd)
-    attrs[4] = speed
-    attrs[5] = speed
-    attrs[2] |= termios.CLOCAL | termios.CREAD
-    attrs[2] &= ~(termios.PARENB | termios.CSTOPB)
-    if hasattr(termios, "CRTSCTS"):
-        attrs[2] &= ~termios.CRTSCTS
-    termios.tcsetattr(fd, termios.TCSANOW, attrs)
+def open_port(port: str, baud: int) -> serial.Serial:
+    return serial.Serial(
+        port=port,
+        baudrate=baud,
+        bytesize=serial.EIGHTBITS,
+        parity=serial.PARITY_NONE,
+        stopbits=serial.STOPBITS_ONE,
+        timeout=0.1,
+        write_timeout=1.0,
+        xonxoff=False,
+        rtscts=False,
+        dsrdtr=False,
+    )
 
 
 def post_json(endpoint: str, payload: dict[str, object], timeout: float = 5.0) -> dict[str, object]:
@@ -90,57 +104,76 @@ def stop(_signum: int, _frame: object) -> None:
     RUNNING = False
 
 
-def stream(args: argparse.Namespace) -> None:
-    buffer = b""
+def should_run(stop_event: threading.Event | None = None) -> bool:
+    return RUNNING and (stop_event is None or not stop_event.is_set())
+
+
+def report_status(callback: object | None, message: str) -> None:
+    if callable(callback):
+        callback(message)
+
+
+def output(args: argparse.Namespace, message: str, *, error: bool = False) -> None:
+    if not getattr(args, "quiet", False):
+        print(message, file=sys.stderr if error else sys.stdout, flush=True)
+
+
+def stream(
+    args: argparse.Namespace,
+    stop_event: threading.Event | None = None,
+    status_callback: object | None = None,
+) -> None:
     poll_command = POLL_COMMANDS[args.poll_command]
-    while RUNNING:
-        fd = -1
+    while should_run(stop_event):
+        connection: serial.Serial | None = None
         try:
             port = find_port(args.port)
-            fd = os.open(port, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
-            configure_port(fd, args.baud)
+            connection = open_port(port, args.baud)
+            buffer = b""
             mode = f"polling every {args.poll_interval:g}s" if args.poll_interval > 0 else "manual send mode"
-            print(f"Connected to {port} at {args.baud} baud; {mode}", flush=True)
+            message = f"Connected to {port} at {args.baud} baud; {mode}"
+            output(args, message)
+            report_status(status_callback, message)
             next_poll = time.monotonic()
-            while RUNNING:
-                timeout = 1.0
+            while should_run(stop_event):
                 if args.poll_interval > 0:
                     now = time.monotonic()
                     if now >= next_poll:
-                        os.write(fd, poll_command)
+                        connection.write(poll_command)
                         next_poll = now + args.poll_interval
-                    timeout = min(timeout, max(0.0, next_poll - time.monotonic()))
-
-                readable, _, _ = select.select([fd], [], [], timeout)
-                if not readable:
-                    continue
-                chunk = os.read(fd, 4096)
+                waiting = connection.in_waiting
+                chunk = connection.read(min(max(waiting, 1), 4096))
                 if not chunk:
-                    raise OSError("DRO serial port closed")
+                    continue
                 buffer += chunk
                 while b"\n" in buffer:
                     raw_line, buffer = buffer.split(b"\n", 1)
                     line = raw_line.rstrip(b"\r").decode("ascii", errors="replace")
                     measurement = parse_dro_line(line, args.unit)
                     if measurement is None:
-                        print(f"Ignored unrecognized line: {line!r}", file=sys.stderr, flush=True)
+                        output(args, f"Ignored unrecognized line: {line!r}", error=True)
                         continue
                     try:
-                        result = post_json(args.endpoint, measurement)
+                        post_json(args.endpoint, measurement)
                         if args.verbose:
-                            print(
+                            output(
+                                args,
                                 f"{measurement['axis']}={measurement['value']} {measurement['unit']} "
                                 f"-> live update accepted",
-                                flush=True,
                             )
                     except Exception as exc:
-                        print(f"Could not forward measurement: {exc}", file=sys.stderr, flush=True)
+                        output(args, f"Could not forward measurement: {exc}", error=True)
         except Exception as exc:
-            print(f"Serial bridge error: {exc}; retrying in {args.retry_seconds:g}s", file=sys.stderr, flush=True)
-            time.sleep(args.retry_seconds)
+            message = f"Serial bridge error: {exc}; retrying in {args.retry_seconds:g}s"
+            output(args, message, error=True)
+            report_status(status_callback, message)
+            if stop_event is not None:
+                stop_event.wait(args.retry_seconds)
+            else:
+                time.sleep(args.retry_seconds)
         finally:
-            if fd >= 0:
-                os.close(fd)
+            if connection is not None:
+                connection.close()
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -163,6 +196,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--retry-seconds", type=float, default=2.0)
     parser.add_argument("--verbose", action="store_true", help="Print every live axis update")
+    parser.add_argument("--quiet", action="store_true", help="Suppress bridge console output")
     return parser
 
 

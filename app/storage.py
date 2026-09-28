@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sqlite3
 import threading
+from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -23,7 +24,7 @@ class MeasurementStore:
         return connection
 
     def _initialize(self) -> None:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.execute("PRAGMA journal_mode=WAL")
             connection.execute(
                 """
@@ -79,7 +80,7 @@ class MeasurementStore:
             )
 
         saved: list[dict[str, Any]] = []
-        with self._write_lock, self._connect() as connection:
+        with self._write_lock, closing(self._connect()) as connection, connection:
             for measurement in normalized:
                 cursor = connection.execute(
                     """
@@ -100,7 +101,7 @@ class MeasurementStore:
 
     def recent(self, limit: int = 100) -> list[dict[str, Any]]:
         safe_limit = max(1, min(int(limit), 1000))
-        with self._connect() as connection:
+        with closing(self._connect()) as connection:
             rows = connection.execute(
                 """
                 SELECT id, axis, value, unit, raw, received_at, stored_at
@@ -113,7 +114,7 @@ class MeasurementStore:
         return [dict(row) for row in rows]
 
     def summary(self) -> dict[str, Any]:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection:
             count = connection.execute("SELECT COUNT(*) FROM measurements").fetchone()[0]
             latest = connection.execute(
                 """

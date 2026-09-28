@@ -17,12 +17,17 @@ ROOT = Path(__file__).resolve().parent
 STATIC_ROOT = ROOT / "static"
 DATABASE_PATH = os.environ.get("DATABASE_PATH", str(ROOT.parent / "dro.sqlite3"))
 PORT = int(os.environ.get("PORT", "8080"))
+BIND_ADDRESS = os.environ.get("BIND_ADDRESS", "0.0.0.0")
 CORS_ORIGIN = os.environ.get("CORS_ORIGIN", "*")
 
 store = MeasurementStore(DATABASE_PATH)
 live_lock = threading.Lock()
 live_axes: dict[str, dict[str, object]] = {}
 live_updated_at: str | None = None
+
+
+class LivePositionUnavailable(ValueError):
+    pass
 
 
 def update_live_position(payload: dict[str, object]) -> dict[str, object]:
@@ -55,6 +60,18 @@ def get_live_position() -> dict[str, object]:
             "axes": {axis: dict(measurement) for axis, measurement in live_axes.items()},
             "updated_at": live_updated_at,
         }
+
+
+def save_live_position(max_age_seconds: float = 2.0) -> list[dict[str, object]]:
+    snapshot = get_live_position()
+    axes = snapshot["axes"]
+    updated_at = snapshot["updated_at"]
+    fresh = False
+    if isinstance(updated_at, str):
+        fresh = (datetime.now(timezone.utc) - datetime.fromisoformat(updated_at)).total_seconds() < max_age_seconds
+    if not fresh or not isinstance(axes, dict) or "X" not in axes or "Y" not in axes:
+        raise LivePositionUnavailable("A current X and Y position is required before saving")
+    return store.add_snapshot([axes["X"], axes["Y"]])
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -135,19 +152,14 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/live":
                 self._send_json(update_live_position(payload), HTTPStatus.OK)
             elif path == "/api/positions":
-                snapshot = get_live_position()
-                axes = snapshot["axes"]
-                updated_at = snapshot["updated_at"]
-                fresh = False
-                if isinstance(updated_at, str):
-                    fresh = (datetime.now(timezone.utc) - datetime.fromisoformat(updated_at)).total_seconds() < 2
-                if not fresh or not isinstance(axes, dict) or "X" not in axes or "Y" not in axes:
+                try:
+                    saved = save_live_position()
+                except LivePositionUnavailable as exc:
                     self._send_json(
-                        {"error": "A current X and Y position is required before saving"},
+                        {"error": str(exc)},
                         HTTPStatus.CONFLICT,
                     )
                     return
-                saved = store.add_snapshot([axes["X"], axes["Y"]])
                 self._send_json({"measurements": saved}, HTTPStatus.CREATED)
             elif path == "/api/measurements":
                 result = store.add(
@@ -166,9 +178,13 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
 
 
+def create_server() -> ThreadingHTTPServer:
+    return ThreadingHTTPServer((BIND_ADDRESS, PORT), Handler)
+
+
 def main() -> None:
-    server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
-    print(f"DRO utility listening on http://0.0.0.0:{PORT}", flush=True)
+    server = create_server()
+    print(f"DRO utility listening on http://{BIND_ADDRESS}:{PORT}", flush=True)
     print(f"SQLite database: {DATABASE_PATH}", flush=True)
     try:
         server.serve_forever()
