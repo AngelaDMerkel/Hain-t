@@ -36,6 +36,7 @@ Hain’t is limited, but feature complete: reading a compatible DRO continuously
 - synchronized X/Y snapshots with one UTC timestamp;
 - a small, cross-platform pySerial bridge for USB serial access;
 - an experimental native launcher for macOS, Windows, and Debian;
+- a keyboard-driven terminal interface with live coordinates and saved-position history;
 - configurable bind address, published port, CORS origin, serial port, baud rate, units, poll rate, and poll command;
 - unprivileged application container with no proprietary runtime or package dependencies.
 
@@ -119,6 +120,19 @@ SQLite database in the operating system’s per-user application-data directory.
 `.venv\Scripts\Activate.ps1` on Windows. Tkinter ships with the standard macOS and Windows Python
 installers; Linux users may also need their distribution’s `python3-tk` package.
 
+### Terminal interface
+
+Run the complete application in a terminal instead:
+
+```bash
+python -m desktop.tui
+```
+
+The TUI polls the DRO, displays the current X/Y coordinates and recent saved positions, and uses the
+same SQLite database as the graphical interface. Press `S` to save the current position, `B` to open
+the browser interface, or `Q` to quit. It accepts `--serial-port`, `--http-port`, `--baud`, `--unit`,
+`--poll-interval`, and `--poll-command`; set `NO_COLOR=1` or pass `--no-color` for plain output.
+
 ## Experimental native packages
 
 The [Native builds workflow](https://github.com/AngelaDMerkel/Hain-t/actions/workflows/native-builds.yml)
@@ -133,6 +147,9 @@ Run the workflow manually from the repository’s **Actions** page or push a ver
 embed the web service, interface, pySerial bridge, and desktop launcher; Docker and a separate Python
 installation are not required. They are currently unsigned experimental builds, so macOS Gatekeeper
 or Windows SmartScreen may require explicit approval before first launch.
+
+Each archive also contains `haint-tui` (`haint-tui.exe` on Windows). The Debian package installs both
+`haint` and `haint-tui` in `/usr/bin`.
 
 The native launcher keeps all traffic on `127.0.0.1`, opens the browser interface automatically, and
 stores `dro.sqlite3` under `%LOCALAPPDATA%\Haint` on Windows,
