@@ -89,23 +89,35 @@
     }
 
     button {
-      display: block;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
       width: 100%;
-      margin-top: 38px;
+      min-height: 44px;
+      margin-top: 30px;
       appearance: none;
       border: 0;
-      border-radius: 2px;
-      padding: 13px 16px 12px;
-      background: var(--accent);
-      color: #f4f5f2;
+      padding: 10px 16px;
+      background: transparent;
+      color: var(--secondary);
       cursor: pointer;
       font: 600 12px/1.2 "Avenir Next", Avenir, "Helvetica Neue", Arial, sans-serif;
-      letter-spacing: .035em;
+      letter-spacing: .055em;
     }
 
-    button:hover:not(:disabled) { background: #506663; }
-    button:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
-    button:disabled { cursor: default; opacity: .38; }
+    .save-mark {
+      color: var(--accent);
+      font: 500 16px/1 "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+
+    button:hover:not(:disabled) {
+      background: rgb(96 120 117 / 6%);
+      color: var(--ink);
+    }
+
+    button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+    button:disabled { cursor: default; opacity: .32; }
 
     .coordinate-line {
       display: grid;
@@ -247,7 +259,7 @@
         <span id="current-y" class="reading missing">—</span>
       </div>
     </div>
-    <button id="save-position" type="button" disabled>Save position</button>
+    <button id="save-position" type="button" disabled><span class="save-mark" aria-hidden="true">+</span><span>Save position</span></button>
   </section>
 
   <section class="history" aria-labelledby="history-label">
