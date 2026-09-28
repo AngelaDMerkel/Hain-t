@@ -20,7 +20,7 @@ Hain’t deliberately does less:
 - presents the current coordinates in a browser;
 - saves a position only when the operator chooses to;
 - persists measurements in an ordinary SQLite database;
-- has no proprietary runtime, subscription, trial period, or Python package dependencies;
+- has no proprietary runtime, subscription, or trial period;
 
 This project is independent of HEIDENHAIN and is not an official replacement or supported HEIDENHAIN product. ACU-RITE, HEIDENHAIN, DRO300, and GAGE-CHEK are trademarks of their respective owners. See the [official GAGE-CHEK Wedge product page](https://www.heidenhain.us/products/gage-chek-wedge/) and the [DRO203/DRO300 operating instructions](https://old.acu-rite.com/pdf/1221048-24_DRO_203_300_OI_en.pdf) for vendor documentation.
 
@@ -34,7 +34,8 @@ Hain’t is limited, but feature complete: reading a compatible DRO continuously
 - active position polling at 4 Hz by default;
 - nearly live X/Y display with stale-connection detection;
 - synchronized X/Y snapshots with one UTC timestamp;
-- a small, dependency-free host bridge for USB serial access;
+- a small, cross-platform pySerial bridge for USB serial access;
+- an experimental native launcher for macOS, Windows, and Debian;
 - configurable bind address, published port, CORS origin, serial port, baud rate, units, poll rate, and poll command;
 - unprivileged application container with no proprietary runtime or package dependencies.
 
@@ -44,6 +45,9 @@ Hain’t is limited, but feature complete: reading a compatible DRO continuously
 | --- | --- |
 | Docker Engine with Compose v2 | Supported |
 | Docker Desktop | Supported |
+| macOS native application | Experimental; Apple silicon and Intel builds |
+| Windows native executable | Experimental; 64-bit build |
+| Debian package | Experimental; 64-bit x86 build |
 | ACU-RITE/HEIDENHAIN DRO300 | Tested over USB |
 | ACU-RITE/HEIDENHAIN DRO203 | Uses the same documented external-operation protocol; hardware validation is pending |
 
@@ -54,9 +58,11 @@ The application stack runs as a standard Linux container wherever Docker Compose
 - an ACU-RITE/HEIDENHAIN DRO with USB device support;
 - a data-capable USB cable;
 - Docker Engine or Docker Desktop with Compose v2;
-- Python 3.11 or newer with POSIX serial-device access on the machine connected to the DRO.
+- Python 3.11 or newer on the machine connected to the DRO.
 
-No `pip install` step is required. Both Python components use only the standard library.
+The web service uses the Python standard library. The USB bridge uses
+[pySerial](https://pyserial.readthedocs.io/) for consistent serial-port discovery and access on macOS,
+Windows, and Linux.
 
 ## Recommended installation
 
@@ -66,8 +72,14 @@ Clone the repository, start the container, and run the USB bridge on the host:
 git clone https://github.com/AngelaDMerkel/Hain-t.git
 cd Hain-t
 docker compose up --build -d
-python3 bridge/dro_bridge.py --port auto
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python bridge/dro_bridge.py --port auto
 ```
+
+In Windows PowerShell, activate the environment with `.venv\Scripts\Activate.ps1` and use `python`
+in place of `python3`.
 
 Open [http://localhost:8080](http://localhost:8080). The status should change to **Live**, and moving an axis should update the displayed coordinates within roughly half a second.
 
@@ -93,18 +105,44 @@ Use **Save position** to persist the displayed X/Y pair. Live polling stays in m
 
 ## Direct install
 
-To run without Docker, start the service and bridge directly from the repository in separate terminals:
+To run without Docker, install the bridge dependency and start the combined desktop launcher:
 
 ```bash
-mkdir -p data
-DATABASE_PATH="$PWD/data/dro.sqlite3" python3 -m app.server
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python -m desktop.launcher
 ```
 
-```bash
-python3 bridge/dro_bridge.py --port auto --poll-interval 0.25
-```
+The launcher starts the local service and serial bridge, opens the browser interface, and stores the
+SQLite database in the operating system’s per-user application-data directory. Use
+`.venv\Scripts\Activate.ps1` on Windows. Tkinter ships with the standard macOS and Windows Python
+installers; Linux users may also need their distribution’s `python3-tk` package.
 
-Open [http://localhost:8080](http://localhost:8080). Stop either process with `Ctrl+C`.
+## Experimental native packages
+
+The [Native builds workflow](https://github.com/AngelaDMerkel/Hain-t/actions/workflows/native-builds.yml)
+produces four downloadable artifacts from this branch:
+
+- a macOS `.app` for Apple silicon;
+- a macOS `.app` for Intel Macs;
+- a 64-bit Windows `.exe`;
+- an `amd64` Debian `.deb` package.
+
+Run the workflow manually from the repository’s **Actions** page or push a version tag. The packages
+embed the web service, interface, pySerial bridge, and desktop launcher; Docker and a separate Python
+installation are not required. They are currently unsigned experimental builds, so macOS Gatekeeper
+or Windows SmartScreen may require explicit approval before first launch.
+
+The native launcher keeps all traffic on `127.0.0.1`, opens the browser interface automatically, and
+stores `dro.sqlite3` under `%LOCALAPPDATA%\Haint` on Windows,
+`~/Library/Application Support/Haint` on macOS, or `$XDG_DATA_HOME/Haint` on Linux. Advanced users can
+run the packaged executable with `--serial-port PORT`, `--http-port PORT`, or `--no-browser`.
+
+The reproducible package commands live in [`packaging/`](packaging/). Install
+`requirements-build.txt`, then run the script for the current operating system. PyInstaller cannot
+cross-compile, so each package must be built on its target operating system; the workflow supplies
+the matching runners.
 
 ## USB access and Docker
 
@@ -112,7 +150,10 @@ The supported deployment intentionally keeps USB access out of the application c
 
 Do not add a `devices:` mapping to the supplied `dro-utility` service: that image does not contain or run the USB bridge, so mapping a device into it will not produce readings. On a native Docker host, `devices:` is useful only for a separate collector container when the Docker daemon can already see the serial character device; that is not Hain’t’s supported topology.
 
-Run `bridge/dro_bridge.py` on the USB-connected host instead. `--port auto` searches `/dev/cu.usbmodem*`; use `--port PATH` for any other device name. Do not let another program open the same serial port concurrently.
+Run `bridge/dro_bridge.py` on the USB-connected host instead. `--port auto` examines the serial-port
+metadata and prefers a device identified as HEIDENHAIN, ACU-RITE, or DRO. Use `--port PATH` on macOS
+or Linux, or `--port COM7` on Windows, to select a device explicitly. Do not let another program open
+the same serial port concurrently.
 
 ## Bridge options
 
@@ -130,8 +171,11 @@ Run `bridge/dro_bridge.py` on the USB-connected host instead. `--port auto` sear
 Examples:
 
 ```bash
-# Select a specific device when more than one USB modem is connected
+# Select a specific device on macOS or Linux
 python3 bridge/dro_bridge.py --port /dev/cu.usbmodem12101
+
+# Select a specific device on Windows
+python bridge/dro_bridge.py --port COM7
 
 # Poll twice per second
 python3 bridge/dro_bridge.py --poll-interval 0.5
@@ -240,6 +284,9 @@ docker compose exec dro-utility python -c \
 
 docker compose cp dro-utility:/data/backup.sqlite3 ./backup.sqlite3
 ```
+
+Native installations use the per-user data directory described under **Experimental native
+packages**. Set `DATABASE_PATH` before launching Hain’t to place the database elsewhere.
 
 ## Troubleshooting
 
