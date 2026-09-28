@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Hain’t — It Hain’t Working</title>
+  <link rel="icon" type="image/png" href="/static/haint-mark.png">
   <style>
     :root {
       color-scheme: light;
@@ -41,6 +42,12 @@
       gap: 32px;
     }
 
+    .brand-lockup {
+      display: block;
+      width: 210px;
+      height: auto;
+    }
+
     .section-label,
     th {
       color: var(--secondary);
@@ -48,22 +55,6 @@
       font-weight: 650;
       letter-spacing: .14em;
       text-transform: uppercase;
-    }
-
-    h1 {
-      margin: 0;
-      font-size: clamp(27px, 4vw, 40px);
-      font-weight: 520;
-      letter-spacing: -.035em;
-      line-height: 1.1;
-    }
-
-    .tagline {
-      margin: 7px 0 0;
-      color: var(--secondary);
-      font-size: 12px;
-      font-weight: 520;
-      letter-spacing: .025em;
     }
 
     .connection {
@@ -240,10 +231,7 @@
 <body>
 <main>
   <header>
-    <div class="brand">
-      <h1>Hain’t</h1>
-      <p class="tagline">It Hain’t Working</p>
-    </div>
+    <img class="brand-lockup" src="/static/haint-lockup.png" alt="Hain’t — It Hain’t Working" width="210" height="80">
     <div class="connection"><span id="dot" class="dot"></span><span id="connection">Connecting</span></div>
   </header>
 

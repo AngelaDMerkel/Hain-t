@@ -4,6 +4,10 @@
 
 [![Tests](https://github.com/AngelaDMerkel/Hain-t/actions/workflows/tests.yml/badge.svg)](https://github.com/AngelaDMerkel/Hain-t/actions/workflows/tests.yml)
 
+<p align="center">
+  <img src="docs/brand/unwedge-lockup.png" alt="Hain’t caliper logo, wordmark, and It Hain’t Working slogan" width="840">
+</p>
+
 Hain’t is a small, open-source position capture service for ACU-RITE/HEIDENHAIN digital readouts. It polls a DRO over USB, displays (nearly) live X/Y coordinates in a browser, and saves operator-selected positions to a timestamped SQLite database.
 
 ![Hain’t showing a live X/Y position and saved measurements](docs/haint.jpg)
