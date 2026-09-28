@@ -2,6 +2,8 @@
 
 > **It Hain’t Working**
 
+[![Tests](https://github.com/AngelaDMerkel/Hain-t/actions/workflows/tests.yml/badge.svg)](https://github.com/AngelaDMerkel/Hain-t/actions/workflows/tests.yml)
+
 Hain’t is a small, open-source position capture service for ACU-RITE/HEIDENHAIN digital readouts. It polls a DRO over USB, displays (nearly) live X/Y coordinates in a browser, and saves operator-selected positions to a timestamped SQLite database.
 
 ![Hain’t showing a live X/Y position and saved measurements](docs/haint.jpg)
@@ -61,8 +63,8 @@ No `pip install` step is required. Both Python components use only the standard 
 Clone the repository, start the container, and run the USB bridge on the host:
 
 ```bash
-git clone <repository-url> haint
-cd haint
+git clone https://github.com/AngelaDMerkel/Hain-t.git
+cd Hain-t
 docker compose up --build -d
 python3 bridge/dro_bridge.py --port auto
 ```

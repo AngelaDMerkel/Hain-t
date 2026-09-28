@@ -4,7 +4,7 @@ Contributions that make Hain’t easier to operate, diagnose, or port are welcom
 
 ## Before opening a change
 
-1. Open an issue for protocol changes or new platform support so the hardware assumptions are explicit.
+1. [Open an issue](https://github.com/AngelaDMerkel/Hain-t/issues/new) for protocol changes or new platform support so the hardware assumptions are explicit.
 2. Keep the serial collector separate from the HTTP service. The service must not depend on a macOS device path.
 3. Avoid adding runtime packages when the Python standard library provides a clear solution.
 4. Preserve the distinction between live readings and operator-saved positions.
@@ -12,8 +12,8 @@ Contributions that make Hain’t easier to operate, diagnose, or port are welcom
 ## Development workflow
 
 ```bash
-git clone <your-fork-url> haint
-cd haint
+git clone https://github.com/<your-username>/Hain-t.git
+cd Hain-t
 python3 -m unittest discover -s tests -v
 docker compose up --build -d
 ```
