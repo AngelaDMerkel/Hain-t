@@ -118,13 +118,13 @@ def stream(
     stop_event: threading.Event | None = None,
     status_callback: object | None = None,
 ) -> None:
-    buffer = b""
     poll_command = POLL_COMMANDS[args.poll_command]
     while should_run(stop_event):
         connection: serial.Serial | None = None
         try:
             port = find_port(args.port)
             connection = open_port(port, args.baud)
+            buffer = b""
             mode = f"polling every {args.poll_interval:g}s" if args.poll_interval > 0 else "manual send mode"
             message = f"Connected to {port} at {args.baud} baud; {mode}"
             print(message, flush=True)

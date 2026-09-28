@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parent
 STATIC_ROOT = ROOT / "static"
 DATABASE_PATH = os.environ.get("DATABASE_PATH", str(ROOT.parent / "dro.sqlite3"))
 PORT = int(os.environ.get("PORT", "8080"))
+BIND_ADDRESS = os.environ.get("BIND_ADDRESS", "0.0.0.0")
 CORS_ORIGIN = os.environ.get("CORS_ORIGIN", "*")
 
 store = MeasurementStore(DATABASE_PATH)
@@ -166,9 +167,13 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
 
 
+def create_server() -> ThreadingHTTPServer:
+    return ThreadingHTTPServer((BIND_ADDRESS, PORT), Handler)
+
+
 def main() -> None:
-    server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
-    print(f"DRO utility listening on http://0.0.0.0:{PORT}", flush=True)
+    server = create_server()
+    print(f"DRO utility listening on http://{BIND_ADDRESS}:{PORT}", flush=True)
     print(f"SQLite database: {DATABASE_PATH}", flush=True)
     try:
         server.serve_forever()
