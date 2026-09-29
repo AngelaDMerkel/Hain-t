@@ -149,12 +149,14 @@ produces four downloadable packages:
 - a 64-bit Windows `.exe`;
 - an `amd64` Debian `.deb` package.
 
-Pushes to `main` and manual workflow runs retain the packages as temporary Actions artifacts. Pushing
-a semantic version tag such as `v0.1.0` builds the same packages, generates SHA-256 checksums, and
-publishes them as a permanent GitHub Release with generated release notes. The packages embed the web
-service, interface, pySerial bridge, and desktop launcher; Docker and a separate Python installation
-are not required. They are currently unsigned experimental builds, so macOS Gatekeeper or Windows
-SmartScreen may require explicit approval before first launch.
+Every push to `main`—and every manual workflow run—builds the packages, assigns the next semantic
+patch version, generates SHA-256 checksums, and publishes a permanent GitHub Release with generated
+release notes. Versioning starts at the value in [`VERSION`](VERSION), currently `1.0.0`; later
+publishes increment the latest release tag (`1.0.1`, `1.0.2`, and so on). A rerun for an already
+tagged commit reuses that version instead of creating another one. The packages embed the web service,
+interface, pySerial bridge, and desktop launcher; Docker and a separate Python installation are not
+required. They are currently unsigned builds, so macOS Gatekeeper or Windows SmartScreen may require
+explicit approval before first launch.
 
 Each archive also contains `haint-tui` (`haint-tui.exe` on Windows). The Debian package installs both
 `haint` and `haint-tui` in `/usr/bin`.

@@ -5,16 +5,28 @@ on:
   push:
     branches:
       - main
-      - experimental/native-packaging
-    tags:
-      - "v*"
 
 permissions:
   contents: read
 
 jobs:
+  prepare:
+    name: Select release version
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: version
+        name: Select next semantic version
+        run: python release_tools/next_version.py
+
   macos:
     name: macOS (${{ matrix.architecture }})
+    needs: prepare
     strategy:
       fail-fast: false
       matrix:
@@ -41,17 +53,19 @@ jobs:
         run: DATABASE_PATH="$RUNNER_TEMP/haint-tui-check.sqlite3" dist/haint-tui --check
       - name: Create archive
         run: |
-          mkdir "Haint-macOS-${{ matrix.architecture }}"
-          cp -R dist/Haint.app "Haint-macOS-${{ matrix.architecture }}/"
-          cp dist/haint-tui LICENSE THIRD_PARTY_NOTICES.md "Haint-macOS-${{ matrix.architecture }}/"
-          ditto -c -k --sequesterRsrc --keepParent "Haint-macOS-${{ matrix.architecture }}" "Haint-macOS-${{ matrix.architecture }}.zip"
+          package="Haint-${{ needs.prepare.outputs.version }}-macOS-${{ matrix.architecture }}"
+          mkdir "$package"
+          cp -R dist/Haint.app "$package/"
+          cp dist/haint-tui LICENSE THIRD_PARTY_NOTICES.md "$package/"
+          ditto -c -k --sequesterRsrc --keepParent "$package" "$package.zip"
       - uses: actions/upload-artifact@v4
         with:
-          name: Haint-macOS-${{ matrix.architecture }}
-          path: Haint-macOS-${{ matrix.architecture }}.zip
+          name: Haint-${{ needs.prepare.outputs.version }}-macOS-${{ matrix.architecture }}
+          path: Haint-${{ needs.prepare.outputs.version }}-macOS-${{ matrix.architecture }}.zip
 
   windows:
     name: Windows (x86_64)
+    needs: prepare
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -77,14 +91,15 @@ jobs:
           & .\dist\haint-tui.exe --check
       - name: Create archive
         shell: pwsh
-        run: Compress-Archive -Path .\dist\Haint.exe, .\dist\haint-tui.exe, .\LICENSE, .\THIRD_PARTY_NOTICES.md -DestinationPath .\Haint-Windows-x86_64.zip
+        run: Compress-Archive -Path .\dist\Haint.exe, .\dist\haint-tui.exe, .\LICENSE, .\THIRD_PARTY_NOTICES.md -DestinationPath .\Haint-${{ needs.prepare.outputs.version }}-Windows-x86_64.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: Haint-Windows-x86_64
-          path: Haint-Windows-x86_64.zip
+          name: Haint-${{ needs.prepare.outputs.version }}-Windows-x86_64
+          path: Haint-${{ needs.prepare.outputs.version }}-Windows-x86_64.zip
 
   debian:
     name: Debian package (amd64)
+    needs: prepare
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -99,7 +114,7 @@ jobs:
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
       - name: Build Debian package
-        run: bash packaging/build_deb.sh
+        run: bash packaging/build_deb.sh "${{ needs.prepare.outputs.version }}"
       - name: Smoke test packaged executable
         run: DATABASE_PATH="$RUNNER_TEMP/haint-check.sqlite3" dist/haint --check
       - name: Smoke test packaged TUI
@@ -108,13 +123,13 @@ jobs:
         run: dpkg-deb --info dist/*.deb
       - uses: actions/upload-artifact@v4
         with:
-          name: Haint-Debian-amd64
+          name: Haint-${{ needs.prepare.outputs.version }}-Debian-amd64
           path: dist/*.deb
 
   release:
     name: Publish GitHub Release
-    if: startsWith(github.ref, 'refs/tags/v')
     needs:
+      - prepare
       - macos
       - windows
       - debian
@@ -134,12 +149,14 @@ jobs:
       - name: Create or update release
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
         run: |
-          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" release-assets/* --clobber
+          if gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" release-assets/* --clobber
           else
-            gh release create "$GITHUB_REF_NAME" release-assets/* \
-              --verify-tag \
+            gh release create "$RELEASE_TAG" release-assets/* \
+              --target "$GITHUB_SHA" \
               --generate-notes \
-              --title "Hain’t $GITHUB_REF_NAME"
+              --title "Hain’t $RELEASE_TAG"
           fi

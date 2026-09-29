@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-version="${1:-0.1.0~experimental}"
+version="${1:-$(tr -d '[:space:]' < VERSION)}"
 architecture="$(dpkg --print-architecture)"
 
 python -m PyInstaller \
