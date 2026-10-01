@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from socketserver import TCPServer
 from urllib.parse import unquote, urlparse
 
 from .storage import MeasurementStore, utc_now
@@ -178,8 +179,16 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json({"error": str(exc)}, HTTPStatus.BAD_REQUEST)
 
 
-def create_server() -> ThreadingHTTPServer:
-    return ThreadingHTTPServer((BIND_ADDRESS, PORT), Handler)
+class DROHTTPServer(ThreadingHTTPServer):
+    def server_bind(self) -> None:
+        # HTTPServer resolves a hostname here only for server_name metadata.
+        # Use the bound address so startup never waits on reverse DNS.
+        TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
+
+
+def create_server() -> DROHTTPServer:
+    return DROHTTPServer((BIND_ADDRESS, PORT), Handler)
 
 
 def main() -> None:

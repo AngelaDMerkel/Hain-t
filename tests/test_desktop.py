@@ -49,15 +49,21 @@ class DesktopServiceBindingTests(unittest.TestCase):
                 environment["BIND_ADDRESS"] = bind_address
             environment["DATABASE_PATH"] = str(Path(directory) / "dro.sqlite3")
             script = """
+import faulthandler
 import json
 import threading
+from unittest.mock import patch
 from urllib.request import ProxyHandler, build_opener
 from desktop.common import bridge_arguments, configure_environment
 
+faulthandler.dump_traceback_later(10)
 configure_environment(0)
 from app import server
 
-http_server = server.create_server()
+# DNS is irrelevant for binding to an IP. macOS Actions runners can spend
+# over 30 seconds resolving the metadata name used by HTTPServer.server_bind.
+with patch("socket.getfqdn", side_effect=AssertionError("Service startup must not require reverse DNS")):
+    http_server = server.create_server()
 thread = threading.Thread(target=http_server.serve_forever, daemon=True)
 thread.start()
 try:
@@ -75,14 +81,17 @@ finally:
     http_server.server_close()
     thread.join(timeout=5)
 """
-            result = subprocess.run(
-                [sys.executable, "-c", script],
-                cwd=Path(__file__).resolve().parents[1],
-                env=environment,
-                capture_output=True,
-                text=True,
-                timeout=15,
-            )
+            try:
+                result = subprocess.run(
+                    [sys.executable, "-u", "-c", script],
+                    cwd=Path(__file__).resolve().parents[1],
+                    env=environment,
+                    capture_output=True,
+                    text=True,
+                    timeout=15,
+                )
+            except subprocess.TimeoutExpired as error:
+                self.fail(f"Service startup timed out. Child output: {error.stdout!r} {error.stderr!r}")
             self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
             return json.loads(result.stdout.splitlines()[-1])
 
