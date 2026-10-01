@@ -30,7 +30,7 @@ def configure_environment(http_port: int) -> Path:
         database = data_directory / "dro.sqlite3"
     data_directory.mkdir(parents=True, exist_ok=True)
     os.environ["DATABASE_PATH"] = str(database)
-    os.environ.setdefault("BIND_ADDRESS", "127.0.0.1")
+    os.environ.setdefault("BIND_ADDRESS", "0.0.0.0")
     os.environ["PORT"] = str(http_port)
     return data_directory
 

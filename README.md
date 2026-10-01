@@ -161,8 +161,14 @@ explicit approval before first launch.
 Each archive also contains `haint-tui` (`haint-tui.exe` on Windows). The Debian package installs both
 `haint` and `haint-tui` in `/usr/bin`.
 
-The native launcher keeps all traffic on `127.0.0.1`, opens the browser interface automatically, and
-stores `dro.sqlite3` under `%LOCALAPPDATA%\Haint` on Windows,
+The native launchers listen on all IPv4 interfaces (`0.0.0.0`) on TCP port `8080` by default,
+so other machines can request `http://<Haint-machine-IP>:8080/api/live`. Windows Firewall must
+allow inbound TCP connections on the selected port. The local browser interface and USB bridge
+continue to connect through `127.0.0.1`. An explicit `BIND_ADDRESS` environment variable overrides
+the listening address; set it to `127.0.0.1` when local-only access is desired.
+
+The graphical launcher opens the browser interface automatically. Both native launchers store
+`dro.sqlite3` under `%LOCALAPPDATA%\Haint` on Windows,
 `~/Library/Application Support/Haint` on macOS, or `$XDG_DATA_HOME/Haint` on Linux. Advanced users can
 run the packaged executable with `--serial-port PORT`, `--http-port PORT`, or `--no-browser`.
 

@@ -1,4 +1,8 @@
+import json
 import os
+import subprocess
+import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -32,6 +36,67 @@ class DesktopBridgeArgumentsTests(unittest.TestCase):
         self.assertEqual(args.port, "COM7")
         self.assertEqual(args.endpoint, "http://127.0.0.1:8123/api/live")
         self.assertEqual(args.poll_interval, 0.25)
+
+
+class DesktopServiceBindingTests(unittest.TestCase):
+    def start_service(self, bind_address=None):
+        # Use the launcher's configuration before importing the service, just as
+        # the packaged applications do. Keep its database and environment isolated.
+        with tempfile.TemporaryDirectory() as directory:
+            environment = os.environ.copy()
+            environment.pop("BIND_ADDRESS", None)
+            if bind_address is not None:
+                environment["BIND_ADDRESS"] = bind_address
+            environment["DATABASE_PATH"] = str(Path(directory) / "dro.sqlite3")
+            script = """
+import json
+import threading
+from urllib.request import ProxyHandler, build_opener
+from desktop.common import bridge_arguments, configure_environment
+
+configure_environment(0)
+from app import server
+
+http_server = server.create_server()
+thread = threading.Thread(target=http_server.serve_forever, daemon=True)
+thread.start()
+try:
+    address, port = http_server.server_address
+    opener = build_opener(ProxyHandler({}))
+    with opener.open(f"http://127.0.0.1:{port}/api/health", timeout=5) as response:
+        health = json.load(response)
+    endpoint = bridge_arguments("COM7", port).endpoint
+    with opener.open(endpoint, timeout=5) as response:
+        live = json.load(response)
+    print(json.dumps({"address": address, "health": health["status"],
+                     "bridge_endpoint": endpoint, "axes": live["axes"]}))
+finally:
+    http_server.shutdown()
+    http_server.server_close()
+    thread.join(timeout=5)
+"""
+            result = subprocess.run(
+                [sys.executable, "-c", script],
+                cwd=Path(__file__).resolve().parents[1],
+                env=environment,
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+            return json.loads(result.stdout.splitlines()[-1])
+
+    def test_native_service_listens_on_all_interfaces_and_keeps_local_bridge_access(self):
+        service = self.start_service()
+        self.assertEqual(service["address"], "0.0.0.0")
+        self.assertEqual(service["health"], "ok")
+        self.assertTrue(service["bridge_endpoint"].startswith("http://127.0.0.1:"))
+        self.assertEqual(service["axes"], {})
+
+    def test_explicit_local_only_binding_is_preserved(self):
+        service = self.start_service("127.0.0.1")
+        self.assertEqual(service["address"], "127.0.0.1")
+        self.assertEqual(service["health"], "ok")
 
 
 if __name__ == "__main__":
